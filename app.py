@@ -73,15 +73,15 @@ def cancel_on_disconnect(handler: Callable[[Request], Awaitable[Any]]):
 @cancel_on_disconnect
 async def example(
     request: Request,
-    timeout: float = Query(..., description="Time to wait, in seconds"),
+    wait: float = Query(..., description="Time to wait, in seconds"),
 ):
     try:
-        print(f"Sleeping for {timeout:.2f}")
+        print(f"Sleeping for {wait:.2f}")
 
-        await asyncio.sleep(timeout)
+        await asyncio.sleep(wait)
 
         print("Sleep not cancelled")
 
-        return f"I waited for {timeout:.2f}s and now this is the result"
+        return f"I waited for {wait:.2f}s and now this is the result"
     except asyncio.CancelledError:
         print("Exiting on cancellation")

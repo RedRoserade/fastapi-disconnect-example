@@ -67,16 +67,16 @@ class CancelOnDisconnect:
 @app.get("/example")
 async def example(
     disconnector: CancelOnDisconnect = Depends(CancelOnDisconnect),
-    timeout: float = Query(..., description="Time to wait, in seconds"),
+    wait: float = Query(..., description="Time to wait, in seconds"),
 ):
     try:
-        print(f"Sleeping for {timeout:.2f}")
+        print(f"Sleeping for {wait:.2f}")
 
-        await disconnector(asyncio.sleep(timeout))
+        await disconnector(asyncio.sleep(wait))
 
         print("Sleep not cancelled")
 
-        return f"I waited for {timeout:.2f}s and now this is the result"
+        return f"I waited for {wait:.2f}s and now this is the result"
     except asyncio.CancelledError:
         # You have two options here:
         # 1) Raise a custom exception, will be logged with traceback
