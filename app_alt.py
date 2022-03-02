@@ -30,16 +30,18 @@ class CancelOnDisconnect:
 
             print("Request disconnected, exiting poller")
         except asyncio.CancelledError:
-            print("Stopping polling loop")
+            print("Polling loop cancelled")
 
-    async def __call__(self, coro: Awaitable[T]) -> T:
+    async def __call__(self, awaitable: Awaitable[T]) -> T:
+        """Run the awaitable and cancel it if the request disconnects"""
+
         # Create two tasks, one to poll the request and check if the
-        # client disconnected, and another which is the request handler
+        # client disconnected, and another which wraps the awaitable
         poller_task = asyncio.ensure_future(self._poll())
-        handler_task = asyncio.ensure_future(coro)
+        main_task = asyncio.ensure_future(awaitable)
 
-        done, pending = await asyncio.wait(
-            [poller_task, handler_task], return_when=asyncio.FIRST_COMPLETED
+        _, pending = await asyncio.wait(
+            [poller_task, main_task], return_when=asyncio.FIRST_COMPLETED
         )
 
         # Cancel any outstanding tasks
@@ -53,15 +55,11 @@ class CancelOnDisconnect:
             except Exception as exc:
                 print(f"{t} raised {exc} when being cancelled")
 
-        # Return the result if the handler finished first
-        if handler_task in done:
-            return await handler_task
-
-        # Otherwise, raise an exception
-        # This is not exactly needed, but it will prevent
-        # validation errors if your request handler is supposed
-        # to return something.
-        raise asyncio.CancelledError()
+        # This will:
+        # - Raise asyncio.CancelledError if the handler was cancelled
+        # - Return the value if it ran to completion
+        # - Raise any other stored exception, if the task raised it
+        return await main_task
 
 
 @app.get("/example")
@@ -84,5 +82,4 @@ async def example(
         # (The client won't see either)
 
         print("Exiting on cancellation")
-
         raise HTTPException(503)
